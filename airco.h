@@ -7,10 +7,6 @@
 #include <myIOTDevice.h>
 
 
-#define	WITH_PLOT			0
-#define WITH_MEM_HISTORY  	1
-
-
 //=========================================================
 // pins
 //=========================================================
@@ -40,9 +36,7 @@
 #define ID_UI_INTERVAL			"UI_INTERVAL"		// int milliseconds; default=1000; min=1000; max=30000 (5 minutes)
 #define ID_PLOT_INTERVAL		"PLOT_INTERVAL"		// int milliseconds; default=3000; min=1000; max=30000 (5 minutes)
 #define ID_LED_BRIGHTNESS		"LED_BRIGHTNESS"
-#if WITH_MEM_HISTORY
-	#define ID_CHART_LINK				"CHART"
-#endif
+#define ID_CHART_LINK			"CHART"
 
 
 class aircoDevice : public myIOTDevice
@@ -66,14 +60,9 @@ public:
 	void handlePixels();
 	void reportError(const char *msg);
 
-	#if WITH_PLOT
-		virtual bool hasPlot() override    { return true; }
-	#endif
-	#if WITH_MEM_HISTORY
-		String onCustomLink(const String &path,  const char **mime_type) override;
-		static String _chart_link;
-			// note that extra_data/airco_chart.html must be uploaded to SPIFFS by hand
-	#endif
+	String onCustomLink(const String &path,  const char **mime_type) override;
+	static String _chart_link;
+		// note that airco_chart.html must be uploaded to SPIFFS by hand
 };
 
 

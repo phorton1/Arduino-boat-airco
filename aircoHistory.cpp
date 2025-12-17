@@ -4,8 +4,6 @@
 
 #include "airco.h"
 
-#if WITH_MEM_HISTORY	// whole file
-
 #include <myIOTLog.h>
 #include <myIOTWebServer.h>
 #include <myIOTDataLog.h>
@@ -37,11 +35,11 @@ typedef struct		// in memory record = 8 bytes per record
 typedef struct
 {
 	uint32_t	dt;
-	uint32_t	mode;			// gray
-	uint32_t	compressor;		// orange
-	uint32_t	fan;			// green
-	float		condensor;		// blue
 	float		intake;			// cyan
+	float		condensor;		// blue
+	uint32_t	fan;			// green
+	uint32_t	compressor;		// orange
+	uint32_t	mode;			// gray
 } sendHistory_t;
 
 
@@ -49,7 +47,7 @@ memHistory_t history[NUM_MEM_RECS];
 volatile int hist_head;
 volatile int hist_tail;
 
-static String series_colors = "[ \"#888888\", \"#ff8800\", \"#00ff00\", \"#0000ff\", \"#00aaaa\" ]";
+static String series_colors = "[ \"#00aaaa\" , \"#0000ff\",\"#00ff00\",\"#ff8800\",\"#888888\" ]";
 
 
 
@@ -165,8 +163,6 @@ String aircoDevice::onCustomLink(const String &path,  const char **mime_type)
 }
 
 
-
-#endif	// WITH_MEM_HISTORY (whole file)
 
 
 

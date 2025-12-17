@@ -7,6 +7,7 @@
 
 #include "airco.h"
 #include <myIOTLog.h>
+#include <myIOTDataLog.h>
 
 #if WITH_PIXELS
 	#include <Adafruit_NeoPixel.h>
@@ -140,9 +141,7 @@ static valueIdType dash_items[] = {
 	ID_UI_INTERVAL,
 	ID_PLOT_INTERVAL,
 	ID_LED_BRIGHTNESS,
-#if WITH_MEM_HISTORY
 	ID_CHART_LINK,
-#endif
     0
 };
 
@@ -160,60 +159,40 @@ const valDescriptor airco_values[] =
  	{ID_UI_INTERVAL,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_ui_interval,		NULL,	{ .int_range = {1000,1000,30000}}, 	},
  	{ID_PLOT_INTERVAL,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_plot_interval,		NULL,	{ .int_range = {3000,1000,30000}}, 	},
 	{ID_LED_BRIGHTNESS, VALUE_TYPE_INT, 	VALUE_STORE_PREF,	VALUE_STYLE_NONE,		(void *) &aircoDevice::_led_brightness,	(void *) aircoDevice::onBrightnessChanged, { .int_range = { DEFAULT_LED_BRIGHTNESS,  10,  255}} },
-#if WITH_MEM_HISTORY
 	{ID_CHART_LINK,		VALUE_TYPE_STRING,	VALUE_STORE_PUB,	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_chart_link, },
-#endif
-
 };
 
 
 #define NUM_AIRCO_VALUES (sizeof(airco_values)/sizeof(valDescriptor))
 
+// chart stuff
+
+extern void addHistoryRecord(uint8_t mode, uint8_t fan, uint8_t intake, uint8_t cond);
+	// defined in aircoHistory.h
+
+logColumn_t  airco_cols[] = {
+	{"intake",		LOG_COL_TYPE_TEMPERATURE,	10,	},
+	{"condensor",	LOG_COL_TYPE_TEMPERATURE,	10,	},
+	{"fan",			LOG_COL_TYPE_UINT32,		100,},
+	{"compressor",	LOG_COL_TYPE_UINT32,		10,	},
+	{"mode",		LOG_COL_TYPE_UINT32,		100,},
+};
+
+myIOTDataLog airco_data_log("aircoData",5,airco_cols,0);
+	// extern'd in aircoHistory.cpp
+	// 0 = debug_send_data level
+
+
+// vars
 
 String		aircoDevice::_state_string;
 String		aircoDevice::_error_string;
 int   		aircoDevice::_ui_interval;
 int   		aircoDevice::_plot_interval;
 int			aircoDevice::_led_brightness;
-#if WITH_MEM_HISTORY
-	String	aircoDevice::_chart_link;
-#endif
-
-static const char *plot_legend = "setp,intake,fan,comp,min,max";
+String		aircoDevice::_chart_link;
 
 aircoDevice *airco;
-
-#if WITH_MEM_HISTORY
-	#include <myIOTDataLog.h>
-
-	extern void addHistoryRecord(uint8_t mode, uint8_t fan, uint8_t intake, uint8_t cond);
-		// defined in aircoHistory.h
-
-	logColumn_t  airco_cols[] = {
-		{"mode",		LOG_COL_TYPE_UINT32,		100,},
-		{"compressor",	LOG_COL_TYPE_UINT32,		10,	},
-		{"fan",			LOG_COL_TYPE_UINT32,		100,},
-		{"condensor",	LOG_COL_TYPE_TEMPERATURE,	10,	},
-		{"intake",		LOG_COL_TYPE_TEMPERATURE,	10,	},
-	};
-
-	myIOTDataLog airco_data_log("aircoData",5,airco_cols,0);
-		// extern'd in aircoHistory.cpp
-		// 0 = debug_send_data level
-
-	myIOTWidget_t aircoWidget = {
-		"aircoWidget",
-        "/myIOT/jquery.jqplot.min.css?cache=1,"
-            "/myIOT/jquery.jqplot.min.js?cache=1,"
-            "/myIOT/jqplot.dateAxisRenderer.js?cache=1,"
-            "/myIOT/jqplot.cursor.js?cache=1,"
-            "/myIOT/jqplot.highlighter.js?cache=1,"
-            "/myIOT/jqplot.legendRenderer.js?cache=1,"
-			"/myIOT/iotChart.js",
-		"doChart('aircoData')",
-		"stopChart('aircoData')",
-		NULL };
-#endif	// WITH_MEM_HISTORY
 
 
 
@@ -245,23 +224,15 @@ void setup()
 	showPixels();
 #endif
 	airco->setup();
-	airco->setPlotLegend(plot_legend);
-
-#if WITH_MEM_HISTORY
-	LOGI("Inititalizing WITH_MEM_HISTORY");
 	String html = airco_data_log.getChartHTML(
 		300,		// height
 		600,		// width
 		86400,		// default period for the chart (1 day)
 		0 );		// default refresh interval
-	aircoWidget.html = new String(html);
-	airco->setDeviceWidget(&aircoWidget);
-
-	// note that extra_data/airco_chart.html must be uploaded to SPIFFS by hand
+	// note that airco_chart.html must be uploaded to SPIFFS by hand
 	airco->_chart_link = "<a href='/spiffs/airco_chart.html?uuid=";
 	airco->_chart_link += airco->getUUID();
 	airco->_chart_link += "' target='_blank'>Chart</a>";
-#endif
 
     LOGU("starting uartTask",0);
 	aircoSerial.begin(9600, SERIAL_8N1, PIN_RX2, PIN_TX2);
@@ -633,15 +604,12 @@ void aircoDevice::handleData()
 		pan_fan 		= data[PAN_FAN_OFFSET];
 	}
 
-#if	WITH_MEM_HISTORY
-
 	// we don't chart till we are more or less guaranteed to
 	// have gotten both sides at least once.  This helps with
 	// scaling the chart to avoid initial zeros.
 	
 	static int all_packets;
 	all_packets++;
-	
 	if (all_packets >= 3)
 	{
 		static uint8_t last_mode;
@@ -661,54 +629,6 @@ void aircoDevice::handleData()
 			addHistoryRecord(pan_mode, pcb_fan, pcb_intake_temp, pcb_cond_temp);
 		}
 	}
-#endif
-
-
-#if WITH_PLOT
-	if (_plot_data && packet_type == PACKET_TYPE_PCB)
-	{
-		// static const char *plot_legend = "setp,intake,fan,comp,min,max";
-		//    in my test setup the setpoint is 24C, and the compressor seems
-		//    to go off after a time at that temperature, so we will use 20-30
-		//    as min and max
-		// compressor on will be represented as 28 and off as 20
-		// The fan is weird, I'm guessing with a high order bit
-		// representing the compressor being on.
-		//
-		//		0x98 => "high", 		== 0x80 + 0x10 + 0x08
-		//		0xa8 => "med",  		== 0x80 + 0x20 + 0x08
-		//		0xc8 => "low",			== 0x80 + 0x40 + 0x08
-		//		0x40 => "auto_low",		==        0x40
-		//		0x20 => "auto_med",		== 		  0x20
-		//		0x10 => "auto_high",	==		  0x10
-
-
-		uint8_t intake = pcb_intake_temp - 40;
-		uint8_t compressor = 20 + (pcb_fan & 0xf);
-		uint8_t fan_byte = (pcb_fan >> 4) & 0x7;
-			// high=1, med=2, low=4 at this point
-			// presumed off=0
-		if (fan_byte)
-			fan_byte = 5 - fan_byte;
-			// off=0, low=1, med=3, high=4
-		fan_byte = 2*fan_byte;
-			// off=0, low=2, med=6, high=8
-		float fan = fan_byte + 20;
-
-		// minus a half for auto modes
-		
-		if (!(pcb_fan & 0x80))
-			fan -= 0.5;
-
-		static char plot_buf[255];
-		sprintf(plot_buf,"{\"plot_data\":[%d,%d,%0.1f,%d,20,30]}",
-			pan_setpoint,
-			intake,
-			fan,
-			compressor);
-			wsBroadcast(plot_buf);
-	}
-#endif	// WITH_PLOT
 
 }	// handleData()
 
