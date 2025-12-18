@@ -15,6 +15,12 @@
 #define PIN_TX2			17
 #define PIN_LED			27
 
+// SD CARD
+// PIN_MOSI		23
+// PIN_MISO		19
+// PIN_SCLK		18
+// PIN_SDCS		5
+
 
 //------------------------
 // myIOT definition
