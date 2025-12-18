@@ -225,7 +225,6 @@ void setup()
 #endif
 	airco->setup();
 	
-	// note that airco_chart.html must be uploaded to SPIFFS by hand
 	airco->_chart_link = "<a href='/spiffs/chart.html?uuid=";
 	airco->_chart_link += airco->getUUID();
 	airco->_chart_link += "' target='_blank'>Chart</a>";

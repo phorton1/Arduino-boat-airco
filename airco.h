@@ -68,7 +68,6 @@ public:
 
 	String onCustomLink(const String &path,  const char **mime_type) override;
 	static String _chart_link;
-		// note that airco_chart.html must be uploaded to SPIFFS by hand
 };
 
 
