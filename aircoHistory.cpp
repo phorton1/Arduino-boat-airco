@@ -56,16 +56,13 @@ String aircoDevice::onCustomLink(const String &path,  const char **mime_type)
 	// for any paths that start with /custom/
 {
 	LOGD("aircoDevice::onCustomLink(%s)",path.c_str());
-	if (path.startsWith("chart_html"))
-	{
-		int period = myiot_web_server->getArg("period",86400);	// day default
-		return data_log.getChartHTML(period,true);
-			// true == with_degrees
-	}
-	else if (path.startsWith("chart_header"))
+	if (path.startsWith("chart_header"))
 	{
 		*mime_type = "application/json";
-		return data_log.getChartHeader(&series_colors);
+		return data_log.getChartHeader(86400,1,&series_colors);
+			// 84600 = default_period = day
+			// 1 = with_degrees
+			// uses device specific series colors
 	}
 	else if (path.startsWith("chart_data"))
 	{
