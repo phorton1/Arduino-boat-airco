@@ -178,7 +178,7 @@ logColumn_t  airco_cols[] = {
 	{"mode",		LOG_COL_TYPE_UINT32,		100,},
 };
 
-myIOTDataLog airco_data_log("aircoData",5,airco_cols,0);
+myIOTDataLog data_log("aircoData",5,airco_cols,0);
 	// extern'd in aircoHistory.cpp
 	// 0 = debug_send_data level
 
@@ -224,13 +224,9 @@ void setup()
 	showPixels();
 #endif
 	airco->setup();
-	String html = airco_data_log.getChartHTML(
-		300,		// height
-		600,		// width
-		86400,		// default period for the chart (1 day)
-		0 );		// default refresh interval
+	
 	// note that airco_chart.html must be uploaded to SPIFFS by hand
-	airco->_chart_link = "<a href='/spiffs/airco_chart.html?uuid=";
+	airco->_chart_link = "<a href='/spiffs/chart.html?uuid=";
 	airco->_chart_link += airco->getUUID();
 	airco->_chart_link += "' target='_blank'>Chart</a>";
 

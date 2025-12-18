@@ -9,7 +9,7 @@
 #include <myIOTDataLog.h>
 
 
-extern myIOTDataLog airco_data_log;
+extern myIOTDataLog data_log;
 	// defined in airco.ino
 
 typedef struct
@@ -47,7 +47,7 @@ void addHistoryRecord(uint8_t mode, uint8_t fan, uint8_t intake, uint8_t cond)
 
 	log_rec.fan = speed;
 	log_rec.compressor = fan & 0xf;
-	airco_data_log.addRecord((logRecord_t) &log_rec);
+	data_log.addRecord((logRecord_t) &log_rec);
 }
 
 
@@ -56,25 +56,26 @@ String aircoDevice::onCustomLink(const String &path,  const char **mime_type)
 	// for any paths that start with /custom/
 {
 	LOGD("aircoDevice::onCustomLink(%s)",path.c_str());
-	if (path.startsWith("chart_html/aircoData"))
+	if (path.startsWith("chart_html"))
 	{
-		// only used by airco_chart.html inasmuch as the
-		// chart html is baked into the myIOT widget
-		int height = myiot_web_server->getArg("height",400);
-		int width  = myiot_web_server->getArg("width",800);
 		int period = myiot_web_server->getArg("period",86400);	// day default
-		int refresh = myiot_web_server->getArg("refresh",0);
-		return airco_data_log.getChartHTML(height,width,period,refresh);
+		return data_log.getChartHTML(period,true);
+			// true == with_degrees
 	}
-	else if (path.startsWith("chart_header/aircoData"))
+	else if (path.startsWith("chart_header"))
 	{
 		*mime_type = "application/json";
-		return airco_data_log.getChartHeader(&series_colors);
+		return data_log.getChartHeader(&series_colors);
 	}
-	else if (path.startsWith("chart_data/aircoData"))
+	else if (path.startsWith("chart_data"))
 	{
 		uint32_t secs = myiot_web_server->getArg("secs",0);
-		return airco_data_log.sendChartData(secs);
+		return data_log.sendChartData(secs);
+	}
+	else if (path.startsWith("update_chart_data"))
+	{
+		uint32_t since = myiot_web_server->getArg("since",0);
+		return data_log.sendChartData(since,true);
 	}
 	return "";
 }
