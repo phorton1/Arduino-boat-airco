@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------
 
 #include "airco.h"
-
 #include <myIOTLog.h>
 #include <myIOTWebServer.h>
 #include <myIOTDataLog.h>
@@ -76,6 +75,3 @@ String aircoDevice::onCustomLink(const String &path,  const char **mime_type)
 	}
 	return "";
 }
-
-
-
