@@ -460,7 +460,7 @@ void aircoDevice::updateUI()
 			uint8_t comp_on   = pcb_fan & 0x0f;
 			if (comp_on == 0x00)
 				strcpy(tbuf," comp_off");
-			else if (comp_on = 0x80)
+			else if (comp_on == 0x80)
 				strcpy(tbuf," comp_on");
 			else
 			{
@@ -476,7 +476,7 @@ void aircoDevice::updateUI()
 			state += pan_on ? "ON" : "OFF";
 			if (pan_on != 0x00 && pan_on != 0xff)
 			{
-				sprintf(tbuf,"UKNOWN PAN_ON 0x%02x)",pan_on);
+				sprintf(tbuf,"UNKNOWN PAN_ON 0x%02x)",pan_on);
 				reportError(tbuf);
 			}
 			state += "  mode(";
