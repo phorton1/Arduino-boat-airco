@@ -53,7 +53,13 @@ String aircoDevice::onCustomLink(const String &path,  const char **mime_type)
 	// called from myIOTHTTP.cpp::handleRequest()
 	// for any paths that start with /custom/
 {
-	LOGD("aircoDevice::onCustomLink(%s)",path.c_str());
+
+	String data_name = "";
+	if (myiot_web_server->hasArg("data_name"))
+		data_name = myiot_web_server->arg("data_name");
+
+	LOGD("aircoDevice::onCustomLink(%s) data_name='%s'",path.c_str(),data_name.c_str());
+
 	if (path.startsWith("chart_header"))
 	{
 		*mime_type = "application/json";

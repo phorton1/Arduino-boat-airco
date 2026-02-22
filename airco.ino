@@ -225,7 +225,7 @@ void setup()
 #endif
 	airco->setup();
 	
-	airco->_chart_link = "<a href='/spiffs/chart.html?uuid=";
+	airco->_chart_link = "<a href='/spiffs/chart.html?data_name=aircoData&uuid=";
 	airco->_chart_link += airco->getUUID();
 	airco->_chart_link += "' target='_blank'>Chart</a>";
 
