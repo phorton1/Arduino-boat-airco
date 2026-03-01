@@ -66,33 +66,25 @@
 #define ID_IDLE_TIME			"IDLE_TIME"			// int seconds; default=3600; min=0 (off); max=84600 (1 day)
 #define ID_IDLE_THRESH			"IDLE_THRESH"		// int; default=60;    min=1; max=4094;
 
-#define ID_DRIVE_ON_TIME		"DRIVE_ON_TIME"		// int microseconds; default=1000; min=100; max=3000;
+#define ID_DRIVE_TIME_US		"DRIVE_TIME_US"		// int microseconds; default=1000; min=100; max=3000;
 	// time in microseconds between turning the DRIVE on and reading the SENSOR.
 	// The default is 1000 us where higher settings lead directly to higher readings.
-#define ID_SAMPLE_TIME			"SAMPLE_TIME"		// in ms, default=1000, min=100, max=3000
+#define ID_SAMPLE_TIME			"SAMPLE_TIME_MS"	// in ms, default=1000, min=100, max=3000
 	// how often, in ms, to take a sample and add it to the circular buffer
 	// This is also the maximum granularity of the pump being turned on and off
-#define ID_NUM_OFF_SAMPLES		"NUM_OFF_SAMPLES"	// int; default=60; min=1; max=120
-	// Used when the pump is off to compare to ON_THRESH to start the pump,
-	// Default=30 to smooth out sloshing etc
-#define ID_NUM_ON_SAMPLES 		"NUM_ON_SAMPLES"	// int default=5; min=1; max=20
-	// Used when the pump is ON to compare to OFF_THRESH to stop the pump
-	// Also used in cooldown for logging
-	// THIS SETS A "SLOP" EXTRA PUMP RUN TIME due to smoothing
+#define ID_NUM_SAMPLES			"NUM_SAMPLES"		// int; default=5; min=1; max=20
+	// Number of samples in circular buffer
+	// THIS SETS A "SLOP" EXTRA PUMP RUN-DRY TIME !!!
 
-#define ID_LOG_OFF_SECS			"LOG_OFF_SECS"		// int seconds; default=180; min=0 (off), max=3600 (one hour)
-	// how often to log sensor values when the pump is OFF
-#define ID_LOG_ON_MS			"LOG_ON_MS"			// in ms; default=2000; min=0 (off) max=30000;
-	// how often to log sensor values when the pump is ON or in COOLDOWN mode
 #define ID_LOG_WINDOW			"LOG_WINDOW"		// int; default=50; min=0 (off); max=100;
-	// used in conjunction with the sensor average and log times below to determine a minimum movement
-	// that will result in a log entry
+	// Sets a window for how far the sensor_avg must move before a log entry is created.
+	// Note that pump on, extra, cooldown, and pump off already generate log entries,
+	// so this is mostly used to guage the rise time, and is set to avoid slosh effects.
 
 // USER INTERFACE
 
 #define ID_CLEAR_ERROR			"CLEAR_ERROR"
 #define ID_UI_INTERVAL			"UI_INTERVAL"		// int milliseconds; default=1000; min=1000; max=30000 (5 minutes)
-#define ID_PLOT_INTERVAL		"PLOT_INTERVAL"		// int milliseconds; default=1000; min=1000; max=30000 (5 minutes)
 #define ID_LED_BRIGHTNESS		"LED_BRIGHTNESS"
 
 #define ID_DRAIN_HISTORY     	"DRAIN_HISTORY"
@@ -101,7 +93,7 @@
 
 // enums
 
-#define MAX_SENSOR_SAMPLES		120
+#define MAX_SENSOR_SAMPLES		20
 
 #define DRAIN_MODE_OFF			0
 #define DRAIN_MODE_ON			1
@@ -144,17 +136,12 @@ public:
 	static int		_idle_time;			// seconds
 	static int		_idle_thresh;		// low threhold vs average of analog reads
 
-	static int		_drive_on_time;		// microseconds;
+	static int		_drive_time_us;		// microseconds;
 	static int		_sample_time;		// milliseconds;
-	static int		_num_off_samples;
-	static int		_num_on_samples;
+	static int		_num_samples;
 
-	static int		_log_off_secs;		// seconds
-	static int		_log_on_ms;			// milliseconds
 	static int 		_log_window;		// sensor reading
-	
 	static int		_ui_interval;		// milliseconds
-	static int		_plot_interval;		// milliseconds
 	static int		_led_brightness;
 
 	static String	_drain_history_link;

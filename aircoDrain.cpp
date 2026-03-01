@@ -51,7 +51,6 @@ static uint32_t pump_start = 0;
 static uint32_t extra_end = 0;
 static uint32_t cooldown_end = 0;
 static bool add_log_record = false;
-static uint32_t last_sensor_log = 0;
 
 
 // static int 		m_sensor_avg = 0;
@@ -92,7 +91,6 @@ static void initChange()
 	last_sensor_avg = -1;
 	last_pump_state = PUMP_ILLEGAL;
 	last_run_flags = 0xFFFF;
-	last_sensor_log = 0;
 
 	airco->m_pump_on = 0;
 	airco->m_run_flags = 0;
@@ -200,7 +198,7 @@ void aircoDevice::handleDrainPump()
 
         last_sample_time = now;
 		digitalWrite(PIN_SDRIVE, HIGH);         		// drive rod to 3.3 V
-		delayMicroseconds(_drive_on_time);              // excite for 1ms
+		delayMicroseconds(_drive_time_us);              // excite for 1ms
 			// higher delays here lead directly to higher readings.
 			// 1000 ms leads to approx 0..1000
 		volatile int tmp = analogRead(PIN_SENSOR);	// discard first read
@@ -215,30 +213,24 @@ void aircoDevice::handleDrainPump()
 
 		// sum and average circular buffer based on NUM_OFF/ON_SAMPLES
 
-		bool use_on_values = m_pump_on || (pump_state == PUMP_COOLDOWN);
-		int num_samples = use_on_values ?
-			_num_on_samples :
-			_num_off_samples;
-
 		int sum = 0;
-		for (int i=0; i<num_samples; i++)
+		for (int i=0; i<_num_samples; i++)
 		{
 			sum += circ_buf[head--];
 			if (head < 0) head = MAX_SENSOR_SAMPLES - 1;
 		}
-		m_sensor_avg = sum / num_samples;
+		m_sensor_avg = sum / _num_samples;
 
 
 		//--------------------------------------
 		// PLOT
 		//--------------------------------------
 
-		LOGV("drain_mode(%d) state(%d) flags(%d) on(%d) num_samples(%d) avg(%d) cur(%d)",
+		LOGV("drain_mode(%d) state(%d) flags(%d) on(%d) avg(%d) cur(%d)",
 			 _drain_mode,
 			 pump_state,
 			 m_run_flags,
 			 m_pump_on,
-			 num_samples,
 			 m_sensor_avg,
 			 cur );
 
@@ -260,33 +252,25 @@ void aircoDevice::handleDrainPump()
 		//--------------------------------------
 		// LOG
 		//--------------------------------------
-		// ONLY if a _log_window is defined AND a log delay of the given type is defined
+		// ONLY if a _log_window is defined
+		// log it if the sensor crossed fully into a new window
 
-		uint32_t log_ms = use_on_values ?
-			_log_on_ms :
-			_log_off_secs * 1000;
-
-		if (_log_window && log_ms && (now-last_sensor_log >= log_ms))
+		static int cur_window = 0;
+		int half = _log_window / 2;
+		int center = cur_window * _log_window + half;
+		if (m_sensor_avg > center + half)
 		{
-			last_sensor_log = now;
-			
-			// determine if the sensor crossed fully into a new window
-			static int cur_window = 0;
-			int half = _log_window / 2;
-			int center = cur_window * _log_window + half;
-			if (m_sensor_avg > center + half)
-			{
-				cur_window++;
-				add_log_record = true;
-			}
-
-			if (m_sensor_avg < center - half)
-			{
-				cur_window--;
-				add_log_record = true;
-			}
+			cur_window++;
+			add_log_record = true;
 		}
-    }
+
+		if (m_sensor_avg < center - half)
+		{
+			cur_window--;
+			add_log_record = true;
+		}
+    }	// _sample_time
+
 
     //--------------------------------------
     // Periodic UI update

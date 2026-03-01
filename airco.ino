@@ -72,10 +72,6 @@ static valueIdType dash_items[] = {
 };
 
 static valueIdType config_items[] = {
-	ID_LED_BRIGHTNESS,
-	ID_UI_INTERVAL,
-	ID_PLOT_INTERVAL,
-
 	ID_ON_THRESH,
 	ID_OFF_THRESH,
 	ID_EXTRA_TIME,
@@ -84,14 +80,13 @@ static valueIdType config_items[] = {
 	ID_IDLE_TIME,
 	ID_IDLE_THRESH,
 
-	ID_DRIVE_ON_TIME,
+	ID_DRIVE_TIME_US,
     ID_SAMPLE_TIME,
-    ID_NUM_OFF_SAMPLES,
-    ID_NUM_ON_SAMPLES,
+    ID_NUM_SAMPLES,
 
-    ID_LOG_OFF_SECS,
-    ID_LOG_ON_MS,
     ID_LOG_WINDOW,
+	ID_LED_BRIGHTNESS,
+	ID_UI_INTERVAL,
 
 	0
 };
@@ -125,16 +120,12 @@ const valDescriptor airco_values[] =
  	{ID_IDLE_TIME,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_idle_time,		NULL,	{ .int_range = {3600, 0,   86400}},	},
  	{ID_IDLE_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_idle_thresh,    NULL,	{ .int_range = {60,   1,   4094}},  },
 
- 	{ID_DRIVE_ON_TIME,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_drive_on_time,  NULL,	{ .int_range = {1000, 100, 3000}},  },
+ 	{ID_DRIVE_TIME_US,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_drive_time_us,  NULL,	{ .int_range = {1000, 100, 3000}},  },
  	{ID_SAMPLE_TIME,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_sample_time,    NULL,	{ .int_range = {1000, 100, 3000}},  },
- 	{ID_NUM_OFF_SAMPLES,VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_num_off_samples,NULL,	{ .int_range = {60,   1,   MAX_SENSOR_SAMPLES}} },
- 	{ID_NUM_ON_SAMPLES, VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_num_on_samples, NULL,	{ .int_range = {5,    1,   20}},    },
- 	{ID_LOG_OFF_SECS,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_log_off_secs,   NULL,	{ .int_range = {180,  0,   3600}},  },
- 	{ID_LOG_ON_MS,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_log_on_ms,    	NULL,	{ .int_range = {1000, 0,   30000}}, },
- 	{ID_LOG_WINDOW,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_log_window,    	NULL,	{ .int_range = {50,   0,   100}}, },
+ 	{ID_NUM_SAMPLES,	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_num_samples,NULL,	{ .int_range = {5,   1,   MAX_SENSOR_SAMPLES}} },
 
+ 	{ID_LOG_WINDOW,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_log_window,    	NULL,	{ .int_range = {50,   0,   100}}, },
 	{ID_UI_INTERVAL,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_ui_interval,	NULL,	{ .int_range = {1000,1000,30000}}, 	},
- 	{ID_PLOT_INTERVAL,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_plot_interval,	NULL,	{ .int_range = {3000,1000,30000}}, 	},
 	{ID_LED_BRIGHTNESS, VALUE_TYPE_INT, 	VALUE_STORE_PREF,	VALUE_STYLE_NONE,		(void *) &aircoDevice::_led_brightness,	(void *) aircoDevice::onBrightnessChanged, { .int_range = { DEFAULT_LED_BRIGHTNESS,  10,  255}} },
 
 	{ID_DRAIN_HISTORY,	VALUE_TYPE_STRING,	VALUE_STORE_PUB,	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_drain_history_link, },
@@ -169,17 +160,12 @@ int			aircoDevice::_cooldown_time;
 int			aircoDevice::_idle_time;
 int			aircoDevice::_idle_thresh;
 
-int			aircoDevice::_drive_on_time;
+int			aircoDevice::_drive_time_us;
 int			aircoDevice::_sample_time;
-int			aircoDevice::_num_off_samples;
-int			aircoDevice::_num_on_samples;
+int			aircoDevice::_num_samples;
 
-int			aircoDevice::_log_off_secs;
-int			aircoDevice::_log_on_ms;
 int			aircoDevice::_log_window;
-
 int			aircoDevice::_ui_interval;
-int			aircoDevice::_plot_interval;
 int			aircoDevice::_led_brightness;
 
 String		aircoDevice::_drain_history_link;
