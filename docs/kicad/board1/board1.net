@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source C:\src\Arduino\boat\airco\docs\kicad\board1\board1.sch)
-    (date "3/1/2026 01:26:50 AM")
+    (date "3/1/2026 09:20:37 PM")
     (tool "Eeschema (5.1.6)-1")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -194,7 +194,7 @@
       (sheetpath (names /) (tstamps /))
       (tstamp 69A3A85D))
     (comp (ref R5)
-      (value 220)
+      (value 120)
       (footprint 0_my_footprints:myResistor)
       (datasheet ~)
       (libsource (lib Device) (part R) (description Resistor))
