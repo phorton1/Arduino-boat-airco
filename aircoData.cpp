@@ -221,7 +221,7 @@ void aircoDevice::clearAircoError()
 				uint8_t comp_on   = m_pcb_fan & 0x0f;
 				if (comp_on == 0x00)
 					strcpy(tbuf," comp_off");
-				else if (comp_on == 0x80)
+				else if (comp_on == 0x08)
 					strcpy(tbuf," comp_on");
 				else
 				{
@@ -345,10 +345,10 @@ void aircoDevice::clearAircoError()
 
 		if (packet_type == PACKET_TYPE_PCB)
 		{
-			pcb_mode 		= data[PCB_MODE_OFFSET];
+			pcb_mode 			= data[PCB_MODE_OFFSET];
 			m_pcb_cond_temp 	= data[PCB_COND_OFFSET];
-			m_pcb_intake_temp = data[PCB_INTAKE_OFFSET];
-			m_pcb_fan 		= data[PCB_FAN_OFFSET];
+			m_pcb_intake_temp 	= data[PCB_INTAKE_OFFSET];
+			m_pcb_fan 			= data[PCB_FAN_OFFSET];
 		}
 		else if (packet_type == PACKET_TYPE_PANEL)
 		{

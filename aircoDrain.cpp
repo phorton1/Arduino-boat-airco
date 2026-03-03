@@ -256,19 +256,19 @@ void aircoDevice::handleDrainPump()
 		// log it if the sensor crossed fully into a new window
 
 		static int cur_window = 0;
-		int half = _log_window / 2;
-		int center = cur_window * _log_window + half;
-		if (m_sensor_avg > center + half)
+		int middle = cur_window * _log_window + _log_window/2;
+
+		if (m_sensor_avg >= middle + _log_window)
+		{
+			cur_window++;
+			add_log_record = true;
+		}
+		else if (m_sensor_avg <= middle - _log_window)
 		{
 			cur_window++;
 			add_log_record = true;
 		}
 
-		if (m_sensor_avg < center - half)
-		{
-			cur_window--;
-			add_log_record = true;
-		}
     }	// _sample_time
 
 
