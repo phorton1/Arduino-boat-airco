@@ -265,7 +265,7 @@ void aircoDevice::handleDrainPump()
 		}
 		else if (m_sensor_avg <= middle - _log_window)
 		{
-			cur_window++;
+			cur_window--;
 			add_log_record = true;
 		}
 
