@@ -272,16 +272,13 @@ void aircoDevice::handlePixels()
 	#define SYS_FLASH_TIME  250
 
 	uint32_t color_system = MY_LED_MAGENTA;
-	if (getBool(ID_WIFI))
-	{
-		iotConnectStatus_t wifi_mode = getConnectStatus();
-		if (wifi_mode == IOT_CONNECT_ALL)
-			color_system = MY_LED_ORANGE;
-		else if (wifi_mode == IOT_CONNECT_AP)
-			color_system = MY_LED_MAGENTA;
-		else if (wifi_mode == IOT_CONNECT_STA)
-			color_system = MY_LED_GREEN;
-	}
+	iotConnectStatus_t wifi_mode = getConnectStatus();
+	if (wifi_mode == IOT_CONNECT_ALL)
+		color_system = MY_LED_ORANGE;
+	else if (wifi_mode == IOT_CONNECT_AP)
+		color_system = MY_LED_MAGENTA;
+	else if (wifi_mode == IOT_CONNECT_STA)
+		color_system = MY_LED_GREEN;
 
 	bool changed = 0;
 	if (last_sys_pixel != color_system)
