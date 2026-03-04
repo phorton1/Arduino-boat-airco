@@ -18,14 +18,14 @@ typedef struct
 {
 	uint32_t	dt;
 	#if WITH_WEBASTO
-		float		intake;			// cyan
-		float		condensor;		// magenta
-		uint32_t	fan;			// green
-		uint32_t	compressor;		// orange
-		uint32_t	mode;			// gray
+		uint8_t	intake;			// cyan
+		uint8_t	condensor;		// magenta
+		uint8_t	fan;			// green
+		uint8_t	compressor;		// orange
+		uint8_t	mode;			// gray
 	#endif
-	uint32_t	sensor;			// blue
-	uint32_t	pump_on;		// red
+	uint8_t	sensor;			// blue
+	uint8_t	pump_on;		// red
 } 	aircoData_t;
 
 
@@ -40,21 +40,21 @@ typedef struct {
 
 logColumn_t  airco_cols[] = {
 	#if WITH_WEBASTO
-		{"intake",		LOG_COL_TYPE_TEMPERATURE,	10,	},
-		{"condensor",	LOG_COL_TYPE_TEMPERATURE,	10,	},
-		{"fan",			LOG_COL_TYPE_UINT32,		100,},
-		{"compressor",	LOG_COL_TYPE_UINT32,		10,	},
-		{"mode",		LOG_COL_TYPE_UINT32,		100,},
+		{"intake",		LOG_COL_TYPE_CENTIGRADE8,	10,	},
+		{"condensor",	LOG_COL_TYPE_CENTIGRADE8,	10,	},
+		{"fan",			LOG_COL_TYPE_UINT8,		10,},
+		{"compressor",	LOG_COL_TYPE_UINT8,		10,	},
+		{"mode",		LOG_COL_TYPE_UINT8,		100,},
 	#endif
-	{"sensor",		LOG_COL_TYPE_UINT32,		100,},
-	{"pump",		LOG_COL_TYPE_UINT32,		1,  },
+	{"sensor",		LOG_COL_TYPE_UINT8x10,		100,},
+	{"pump",		LOG_COL_TYPE_UINT8,		1,  },
 };
 
 #if WITH_WEBASTO
-	myIOTDataLog data_log("aircoData",7,airco_cols,0);
+	myIOTDataLog data_log("aircoData",7,airco_cols);
 		// 0 = debug_send_data level
 #else
-	myIOTDataLog data_log("drainData",2,airco_cols,0);
+	myIOTDataLog data_log("drainData",2,airco_cols);
 		// 0 = debug_send_data level
 #endif
 
@@ -133,27 +133,44 @@ void aircoDevice::addLogRecord()
 	aircoData_t log_rec;
 
 #if WITH_WEBASTO
-	log_rec.intake = m_pcb_intake_temp - 40;
-	log_rec.condensor = m_pcb_cond_temp - 40;
-	log_rec.mode = m_pan_mode;
+	log_rec.intake = m_pcb_intake_temp;		// already a CENTIGRADE8 type
+	log_rec.condensor = m_pcb_cond_temp;	// already a CENTIGRADE8 type
+	log_rec.mode = m_pan_mode;				// plain UINT8 type
 
 	uint8_t speed_enum = m_pcb_fan & 0x70;	// 0x00=off; 0x40=low; 0x20=med; 0x10=high
 	bool	user = m_pcb_fan & 0x80;			// as opposed to 'auto'
 
 	uint32_t speed =
-		speed_enum == 0x40 ? 100 :		// low
-		speed_enum == 0x20 ? 200 :		// medium
-		speed_enum == 0x10 ? 300 :		// high
+		speed_enum == 0x40 ? 10 :		// low
+		speed_enum == 0x20 ? 20 :		// medium
+		speed_enum == 0x10 ? 30 :		// high
 		0;								// off
-	if (!user) speed += 20;				// bump for auto
+	if (!user) speed += 2;				// bump for auto
 
 	log_rec.fan = speed;
 	log_rec.compressor = m_pcb_fan & 0xf;
 #endif
 
-	log_rec.sensor = m_sensor_avg;
-	log_rec.pump_on = m_pump_on;
-	
+	log_rec.sensor = m_sensor_avg / 10;	// UINT8x10
+	log_rec.pump_on = m_pump_on;		// plain UINT8 type
+
+#if 1
+	#if WITH_WEBASTO
+		LOGU("airco addLogRecord(%0.3f,%0.3f,%d,%d,%d,%d,%d)",
+			 log_rec.intake,
+			 log_rec.condensor,
+			 log_rec.fan,
+			 log_rec.compressor,
+			 log_rec.mode,
+			 log_rec.sensor,
+			 log_rec.pump_on);
+	#else
+		LOGU("addLogRecord(%d,%d)",
+			 log_rec.sensor,
+			 log_rec.pump_on);
+	#endif
+#endif
+
 	data_log.addRecord((logRecord_t) &log_rec);
 }
 
