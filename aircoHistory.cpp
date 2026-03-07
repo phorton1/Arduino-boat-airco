@@ -72,6 +72,8 @@ static String flagsToString(uint32_t flags, bool forHTML)
 	{
 		if (flags & DRAIN_FLAG_IDLE_RUN)
 			text = "IDLE_RUN";
+		else if (flags & DRAIN_FLAG_INITIAL_RUN)
+			text = "INITIAL_RUN";
 		if (flags & DRAIN_FLAG_TOO_LONG)
 		{
 			if (text != "") text += " ";
@@ -154,7 +156,7 @@ void aircoDevice::addLogRecord()
 	log_rec.sensor = m_sensor_avg / 10;	// UINT8x10
 	log_rec.pump_on = m_pump_on;		// plain UINT8 type
 
-#if 1
+#if 0
 	#if WITH_WEBASTO
 		LOGU("airco addLogRecord(%0.3f,%0.3f,%d,%d,%d,%d,%d)",
 			 log_rec.intake,

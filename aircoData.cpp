@@ -119,6 +119,7 @@ void aircoDevice::clearAircoError()
 			if (err != "")
 				err += "; ";
 			err += msg;
+			LOGE(err.c_str());
 			setString(ID_AIRCO_ERROR,err);
 		}
 	}

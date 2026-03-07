@@ -335,19 +335,28 @@ void aircoDevice::handleDrainPump()
 				updateDrainPumpUI();
 				add_log_record = true;
             }
-            else if (_idle_time && _time_last_run &&
-				time_now - _time_last_run > _idle_time &&
-				m_sensor_avg >= _idle_thresh)
-            {
-				LOGU("PUMP ON IDLE(%d) >= %d",m_sensor_avg,_idle_thresh);
-                pumpOn(1);
-                pump_start = now;
-                pump_state = PUMP_ON;
-				m_run_flags = DRAIN_FLAG_IDLE_RUN;
-				m_run_start = time_now;
-				updateDrainPumpUI();
-				add_log_record = true;
-            }
+            else if (_idle_time && m_sensor_avg >= _idle_thresh)
+			{
+				bool run_it = _time_last_run ?
+					(time_now - _time_last_run > _idle_time) :
+					(now > _idle_time * 1000);
+				if (run_it)
+				{
+					LOGU("PUMP ON %s(%d) >= %d",
+						_time_last_run ? "IDLE" : "INITIAL",
+						m_sensor_avg,
+						_idle_thresh);
+					pumpOn(1);
+					pump_start = now;
+					pump_state = PUMP_ON;
+					m_run_flags = _time_last_run ?
+						DRAIN_FLAG_IDLE_RUN :
+						DRAIN_FLAG_INITIAL_RUN;
+					m_run_start = time_now;
+					updateDrainPumpUI();
+					add_log_record = true;
+				}
+			}
             break;
 
         case PUMP_ON:
