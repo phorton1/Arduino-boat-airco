@@ -269,7 +269,11 @@ void aircoDevice::clearAircoError()
 			}	// if num_packets > 1
 
 			if (_airco_state_string != state)
+			{
 				setString(ID_AIRCO_STATE,state);
+				force_pixels = true;
+					// mitigate LEDs going off (?!?!) on pump/compressor power surges(?!?!)
+			}
 		}
 	}
 
@@ -515,7 +519,7 @@ void aircoDevice::clearAircoError()
 	//--------------------------------------------
 	// initAircoMonitor()
 	//--------------------------------------------
-	
+
 	void aircoDevice::initAircoMonitor()
 	{
 		LOGD("initAircoMonitor() starting aircoTask",0);

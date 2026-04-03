@@ -122,7 +122,7 @@ public:
 
 	static String 	_drain_state_string;		// built string
 	static uint32_t	_drain_mode;				// enum
-	
+
 	static String 	_state_last_run;			// built string
     static time_t   _time_last_run;
     static int      _since_last_run;
@@ -188,7 +188,7 @@ public:
 	static void onDrainModeChanged(const myIOTValue *value, uint32_t val);
 
 	// in aircoHistory.cpp
-	
+
 	void endDrainRun();
 	void addLogRecord();
 	String onCustomLink(const String &path,  const char **mime_type) override;
@@ -198,7 +198,5 @@ public:
 
 extern aircoDevice *airco;
 
-
-
-
-
+extern bool force_pixels;
+	// public to mitigate LEDs going off (?!?!) on pump/compressor power surges(?!?!)

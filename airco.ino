@@ -38,7 +38,8 @@
 static Adafruit_NeoPixel pixels(NUM_PIXELS,PIN_LED);
 static uint32_t last_sys_pixel = MY_LED_BLACK;
 static uint32_t last_state_pixel = MY_LED_BLACK;
-static bool force_pixels = 0;
+bool force_pixels = 0;
+	// public to mitigate LEDs going off (?!?!) on pump/compressor power surges(?!?!)
 
 static void showPixels()						{pixels.show();}
 static void clearPixels()						{pixels.clear();}
@@ -206,7 +207,7 @@ void setup()
 	pinMode(PIN_SENSOR,INPUT);
 
 	setPixelsBrightness(INITIAL_LED_BRIGHTNESS);
-	setPixel(PIXEL_STATE,MY_LED_CYAN);
+	setPixel(PIXEL_SYSTEM,MY_LED_CYAN);
 	showPixels();
 
     Serial.begin(MY_IOT_ESP32_CORE == 3 ? 115200 : 921600);
@@ -218,7 +219,7 @@ void setup()
     airco->setTabLayouts(dash_items,config_items);
 
     LOGU("calling airco->setup()",0);
-	setPixel(PIXEL_SYSTEM,MY_LED_CYAN);
+	setPixel(PIXEL_STATE,MY_LED_CYAN);
 	showPixels();
 
 	airco->setup();
@@ -234,8 +235,8 @@ void setup()
 	airco->setPlotLegend(plot_legend);
 
     LOGU("calling airco->setup()",0);
-	setPixel(PIXEL_SYSTEM,MY_LED_GREEN);
-	setPixel(PIXEL_STATE,MY_LED_GREEN);
+	setPixel(PIXEL_SYSTEM,MY_LED_YELLOW);
+	showPixels();
 	delay(1000);
 
 
