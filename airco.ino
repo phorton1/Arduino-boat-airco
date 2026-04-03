@@ -103,7 +103,7 @@ const valDescriptor airco_values[] =
   	{ID_AIRCO_ERROR,	VALUE_TYPE_STRING,  VALUE_STORE_PUB, 	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_airco_error_string,	},
 #endif
 	{ID_CLEAR_ERROR,    VALUE_TYPE_COMMAND, VALUE_STORE_SUB,    VALUE_STYLE_NONE,       NULL, (void *) aircoDevice::clearAircoError },
- 
+
  	{ID_DRAIN_STATE,	VALUE_TYPE_STRING,  VALUE_STORE_PUB, 	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_drain_state_string,	},
 	{ID_DRAIN_MODE,		VALUE_TYPE_ENUM,	VALUE_STORE_PREF,	VALUE_STYLE_NONE,		(void *) &aircoDevice::_drain_mode,		(void *) aircoDevice::onDrainModeChanged, 	{ .enum_range = { 0, drainModes }} },
 
@@ -205,12 +205,9 @@ void setup()
 
 	pinMode(PIN_SENSOR,INPUT);
 
-#if WITH_PIXELS
 	setPixelsBrightness(INITIAL_LED_BRIGHTNESS);
-	setPixel(PIXEL_SYSTEM,MY_LED_CYAN);
 	setPixel(PIXEL_STATE,MY_LED_CYAN);
 	showPixels();
-#endif
 
     Serial.begin(MY_IOT_ESP32_CORE == 3 ? 115200 : 921600);
     delay(1000);
@@ -221,7 +218,7 @@ void setup()
     airco->setTabLayouts(dash_items,config_items);
 
     LOGU("calling airco->setup()",0);
-	setPixel(PIXEL_STATE,MY_LED_GREEN);
+	setPixel(PIXEL_SYSTEM,MY_LED_CYAN);
 	showPixels();
 
 	airco->setup();
@@ -229,12 +226,18 @@ void setup()
     airco->_drain_history_link = "<a href='/custom/getDrainHistory:?uuid=";
     airco->_drain_history_link += airco->getUUID();
     airco->_drain_history_link += "' target='_blank'>Drain History</a>";
-	
+
 	airco->_chart_link = "<a href='/spiffs/chart.html?data_name=combinedData&uuid=";
 	airco->_chart_link += airco->getUUID();
 	airco->_chart_link += "' target='_blank'>Chart</a>";
 
 	airco->setPlotLegend(plot_legend);
+
+    LOGU("calling airco->setup()",0);
+	setPixel(PIXEL_SYSTEM,MY_LED_GREEN);
+	setPixel(PIXEL_STATE,MY_LED_GREEN);
+	delay(1000);
+
 
 #if WITH_WEBASTO
 	airco->initAircoMonitor();		// start uart task
@@ -296,7 +299,7 @@ void aircoDevice::handlePixels()
 	// if the pump runs too long, the led will start flashing green
 	// when it goes off, and will continue flashing through blue on
 	// the next run, until the next run ends.
-	
+
 	int error_code = m_flags_last_run & DRAIN_FLAG_TOO_LONG;
 	uint32_t color_state = m_pump_on ? MY_LED_BLUE : MY_LED_GREEN;
 
@@ -357,4 +360,3 @@ void loop()
 
 
 // end of airco.ino
-
