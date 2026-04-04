@@ -186,6 +186,7 @@ uint32_t 	aircoDevice::m_flags_last_run;
 #endif
 
 aircoDevice *airco;
+extern void setupAircoHistory();	// in aircoHistory.cpp
 
 
 
@@ -223,6 +224,7 @@ void setup()
 	showPixels();
 
 	airco->setup();
+	setupAircoHistory();		// register data_log with base class
 
     airco->_drain_history_link = "<a href='/custom/getDrainHistory:?uuid=";
     airco->_drain_history_link += airco->getUUID();

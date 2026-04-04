@@ -336,39 +336,25 @@ static String buildHTML()
 //---------------------------------------------------------
 
 
+void setupAircoHistory()
+	// called from airco.ino setup() to register data_log with base class
+	// chart_header/chart_data/update_chart_data and maintenance endpoints
+	// are handled by myIOTDevice::onCustomLink() via addDataLog() registration
+{
+	my_iot_device->addDataLog(&data_log, 86400, 1, &series_colors);
+		// default_period=86400 (day), with_degrees=1, custom series colors
+}
+
+
 String aircoDevice::onCustomLink(const String &path,  const char **mime_type)
 	// called from myIOTHTTP.cpp::handleRequest()
-	// for any paths that start with /custom/
+	// getDrainHistory is app-specific; all chart + maintenance paths
+	// are handled by myIOTDevice base class via addDataLog() registration
 {
+	LOGD("aircoDevice::onCustomLink(%s)",path.c_str());
 
-	String data_name = "";
-	if (myiot_web_server->hasArg("data_name"))
-		data_name = myiot_web_server->arg("data_name");
-
-	LOGD("aircoDevice::onCustomLink(%s) data_name='%s'",path.c_str(),data_name.c_str());
-
-	if (path.startsWith("chart_header"))
-	{
-		*mime_type = "application/json";
-		return data_log.getChartHeader(86400,1,&series_colors);
-			// 84600 = default_period = day
-			// 1 = with_degrees
-			// uses device specific series colors
-	}
-	else if (path.startsWith("chart_data"))
-	{
-		uint32_t secs = myiot_web_server->getArg("secs",0);
-		return data_log.sendChartData(secs);
-	}
-	else if (path.startsWith("update_chart_data"))
-	{
-		uint32_t since = myiot_web_server->getArg("since",0);
-		return data_log.sendChartData(since,true);
-	}
-	// HTML History
-
-    else if (path.startsWith("getDrainHistory"))
+	if (path.startsWith("getDrainHistory"))
 		return buildHTML();
 
-	return "";
+	return myIOTDevice::onCustomLink(path, mime_type);
 }
