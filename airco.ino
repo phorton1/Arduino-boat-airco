@@ -229,8 +229,11 @@ void setup()
     airco->_drain_history_link = "<a href='/custom/getDrainHistory:?uuid=";
     airco->_drain_history_link += airco->getUUID();
     airco->_drain_history_link += "' target='_blank'>Drain History</a>";
-
+#if WITH_WEBASTO
+	airco->_chart_link = "<a href='/spiffs/chart.html?data_name=aircoData&uuid=";
+#else
 	airco->_chart_link = "<a href='/spiffs/chart.html?data_name=combinedData&uuid=";
+#endif
 	airco->_chart_link += airco->getUUID();
 	airco->_chart_link += "' target='_blank'>Chart</a>";
 
