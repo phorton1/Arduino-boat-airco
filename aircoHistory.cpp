@@ -135,6 +135,13 @@ void aircoDevice::addLogRecord()
 	aircoData_t log_rec;
 
 #if WITH_WEBASTO
+	// until the first PCB packet arrives the PCB temperatures are still
+	// zero, which as CENTIGRADE8 (bias 40) would log as a bogus -40C.
+	// This covers both the packet path and the drain-end path.
+
+	if (!m_have_pcb)
+		return;
+
 	log_rec.intake = m_pcb_intake_temp;		// already a CENTIGRADE8 type
 	log_rec.condensor = m_pcb_cond_temp;	// already a CENTIGRADE8 type
 	log_rec.mode = m_pan_mode;				// plain UINT8 type

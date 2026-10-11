@@ -159,6 +159,7 @@ public:
 	static uint8_t	m_pcb_intake_temp;
 	static uint8_t	m_pcb_fan;
 	static uint8_t	m_pan_mode;
+	static bool		m_have_pcb;		// a PCB packet has been received since boot
 #endif
 
 	// implementation

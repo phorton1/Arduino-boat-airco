@@ -354,6 +354,7 @@ void aircoDevice::clearAircoError()
 			m_pcb_cond_temp 	= data[PCB_COND_OFFSET];
 			m_pcb_intake_temp 	= data[PCB_INTAKE_OFFSET];
 			m_pcb_fan 			= data[PCB_FAN_OFFSET];
+			m_have_pcb			= true;
 		}
 		else if (packet_type == PACKET_TYPE_PANEL)
 		{

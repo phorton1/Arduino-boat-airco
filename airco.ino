@@ -183,6 +183,7 @@ uint32_t 	aircoDevice::m_flags_last_run;
 	uint8_t		aircoDevice::m_pcb_intake_temp;
 	uint8_t		aircoDevice::m_pcb_fan;
 	uint8_t		aircoDevice::m_pan_mode;
+	bool		aircoDevice::m_have_pcb;
 #endif
 
 aircoDevice *airco;
