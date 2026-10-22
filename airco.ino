@@ -113,13 +113,13 @@ const valDescriptor airco_values[] =
     {ID_SINCE_LAST_RUN, VALUE_TYPE_INT,     VALUE_STORE_PUB,    VALUE_STYLE_HIST_TIME,  (void *) &aircoDevice::_since_last_run,NULL,   { .int_range = { 0, DEVICE_MIN_INT, DEVICE_MAX_INT}}  },
     {ID_DUR_LAST_RUN,   VALUE_TYPE_INT,     VALUE_STORE_PUB,    VALUE_STYLE_READONLY,   (void *) &aircoDevice::_dur_last_run,  NULL,   { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
 
-	{ID_ON_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_on_thresh,		NULL,	{ .int_range = {500,  1,   4094}}, 	},
- 	{ID_OFF_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_off_thresh,		NULL,	{ .int_range = {10,   1,   4094}}, 	},
+	{ID_ON_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_on_thresh,		NULL,	{ .int_range = {600,  1,   4094}}, 	},
+ 	{ID_OFF_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_off_thresh,		NULL,	{ .int_range = {60,   1,   4094}}, 	},
  	{ID_EXTRA_TIME,		VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_extra_time,		NULL,	{ .int_range = {0,    0,   30}}, 	},
  	{ID_MAX_TIME,		VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_max_time,		NULL,	{ .int_range = {120,  30,  360}}, 	},
- 	{ID_COOLDOWN_TIME,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_cooldown_time,  NULL,	{ .int_range = {60,   10,  900}}, 	},
- 	{ID_IDLE_TIME,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_idle_time,		NULL,	{ .int_range = {3600, 0,   86400}},	},
- 	{ID_IDLE_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_idle_thresh,    NULL,	{ .int_range = {60,   1,   4094}},  },
+ 	{ID_COOLDOWN_TIME,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_cooldown_time,  NULL,	{ .int_range = {900,  10,  7200}}, 	},
+ 	{ID_IDLE_TIME,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_idle_time,		NULL,	{ .int_range = {14400,0,   86400}},	},
+ 	{ID_IDLE_THRESH,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_idle_thresh,    NULL,	{ .int_range = {120,  1,   4094}},  },
 
  	{ID_DRIVE_TIME_US,  VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_drive_time_us,  NULL,	{ .int_range = {1000, 100, 3000}},  },
  	{ID_SAMPLE_TIME,  	VALUE_TYPE_INT,  	VALUE_STORE_PREF, 	VALUE_STYLE_NONE,		(void *) &aircoDevice::_sample_time,    NULL,	{ .int_range = {1000, 100, 3000}},  },

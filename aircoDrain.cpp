@@ -96,6 +96,7 @@ static void initChange()
 	airco->m_run_flags = 0;
 	airco->m_sensor_avg = 0;
 
+	pump_state = PUMP_OFF;
 	airco->pumpOn(0);
 	airco->updateDrainPumpUI();
 }

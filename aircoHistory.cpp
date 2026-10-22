@@ -30,7 +30,7 @@ typedef struct
 
 
 typedef struct {
-	time_t 		start;		// starting time
+	uint32_t 	end;		// ending time (the run started at end-dur)
 	uint16_t 	dur;		// duration cannot be larger than 65534 (like 18 hours)
 	uint16_t	flags;		// uint32_t error_code enum compressed into a word
 }	drainHistory_t;			// 8 bytes
@@ -94,15 +94,31 @@ static String flagsToString(uint32_t flags, bool forHTML)
 
 void aircoDevice::endDrainRun()
 {
+	if (!m_run_start)
+	{
+		LOGE("endDrainRun() called with no run in progress (m_run_start==0) flags(0x%04x)",m_run_flags);
+		m_run_flags = 0;
+		return;
+	}
+
 	time_t time_now = time(NULL);
 	time_t elapsed = time_now - m_run_start;
 	LOGD("endRun elapsed(%u)",elapsed);
+
+	// the history dur is a uint16_t; a clock jump (i.e. NTP sync during
+	// a run) or an endless FORCE run must not wrap into a bogus value
+
+	if (elapsed < 0 || elapsed > 65534)
+	{
+		LOGE("endDrainRun() invalid elapsed(%ld) clamped to 65534",(long) elapsed);
+		elapsed = 65534;
+	}
 
     #if WITH_SD
 		if (myIOTDevice::hasSD())
 		{
 			drainHistory_t hist_rec;
-			hist_rec.start = time_now;
+			hist_rec.end = time_now;
 			hist_rec.dur = elapsed;
 			hist_rec.flags = m_run_flags;
 			File file = SD.open(DRAIN_HISTORY_FILE, FILE_APPEND);
@@ -211,9 +227,11 @@ static String durString(uint32_t since)
 
 
 static bool sendRecordHTML(int num,time_t time_now,const drainHistory_t *rec, const drainHistory_t *next_rec)
+	// The record holds the END time; the displayed time is the START (end-dur).
 	// Note that the "ago" is since the run ENDED, to be consistent
 	// with the interval between runs, which is from when the this one ENDED
-	// till the next one STARTED
+	// till the next one STARTED.  All math is signed, and negative values
+	// (clock jumps, overlapping records) display as blank.
 {
 	String text = "";
 	String dur = "";
@@ -221,16 +239,17 @@ static bool sendRecordHTML(int num,time_t time_now,const drainHistory_t *rec, co
 	text += "<tr><td>";
 	text += String(num);
 	text += "</td><td>";
-	text += timeToString(rec->start);
+	text += timeToString((time_t)(rec->end - rec->dur));	// the START
 	text += "</td><td align='center'>";
 	text += String(rec->dur);
 	text += "</td><td>";
-	text += durString(time_now - rec->start - rec->dur);	// since it ENDED
+	int32_t ago = (int32_t) time_now - (int32_t) rec->end;		// since it ENDED
+	text += ago >= 0 ? durString(ago) : String("&nbsp;");
 	text += "</td><td>";
-	if (next_rec->start)
+	if (next_rec->end)
 	{
-		uint32_t interval = next_rec->start - (rec->start + rec->dur);
-		text += durString(interval);
+		int32_t interval = (int32_t) next_rec->end - (int32_t) next_rec->dur - (int32_t) rec->end;
+		text += interval >= 0 ? durString(interval) : String("&nbsp;");
 	}
 	else
 	{
@@ -311,7 +330,7 @@ static String buildHTML()
 	time_t time_now = time(NULL);
 	drainHistory_t rec;
 	drainHistory_t next_rec;
-	next_rec.start = 0;		// init "next" dt to zero for identification
+	next_rec.end = 0;		// init "next" end to zero for identification
 
 	for (int i=count-1; i>=0; i--)
 	{
