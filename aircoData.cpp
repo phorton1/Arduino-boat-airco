@@ -312,7 +312,7 @@ void aircoDevice::clearAircoError()
 		uint8_t crc = data[len-1];
 		bool ok = sum == crc;
 		tstring += ok ? "" : "CRC ERROR";
-		LOGD(tstring.c_str());
+		LOGV(tstring.c_str());
 
 		if (!ok)
 		{
