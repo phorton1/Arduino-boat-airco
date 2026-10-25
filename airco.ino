@@ -56,8 +56,13 @@ static valueIdType dash_items[] = {
 #if WITH_WEBASTO
 	ID_AIRCO_STATE,
 	ID_AIRCO_ERROR,
+	ID_AIRCO_BUS,
+	ID_TEST_NO_PACKETS,
 #endif
 	ID_CLEAR_ERROR,
+#if WITH_DBG_RAW_PACKETS
+	ID_DBG_RAW_PACKETS,
+#endif
 
 	ID_DRAIN_STATE,
 	ID_DRAIN_MODE,
@@ -102,8 +107,13 @@ const valDescriptor airco_values[] =
 #if WITH_WEBASTO
  	{ID_AIRCO_STATE,	VALUE_TYPE_STRING,  VALUE_STORE_PUB, 	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_airco_state_string,	},
   	{ID_AIRCO_ERROR,	VALUE_TYPE_STRING,  VALUE_STORE_PUB, 	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_airco_error_string,	},
+  	{ID_AIRCO_BUS,		VALUE_TYPE_STRING,  VALUE_STORE_PUB, 	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_airco_bus_string,	},
+	{ID_TEST_NO_PACKETS,VALUE_TYPE_BOOL,	VALUE_STORE_PUB,	VALUE_STYLE_NONE,		(void *) &aircoDevice::_test_no_packets,	NULL,	},
 #endif
 	{ID_CLEAR_ERROR,    VALUE_TYPE_COMMAND, VALUE_STORE_SUB,    VALUE_STYLE_NONE,       NULL, (void *) aircoDevice::clearAircoError },
+#if WITH_DBG_RAW_PACKETS
+	{ID_DBG_RAW_PACKETS,VALUE_TYPE_COMMAND, VALUE_STORE_SUB,    VALUE_STYLE_NONE,       NULL, (void *) aircoDevice::dbgRawPackets },
+#endif
 
  	{ID_DRAIN_STATE,	VALUE_TYPE_STRING,  VALUE_STORE_PUB, 	VALUE_STYLE_READONLY,	(void *) &aircoDevice::_drain_state_string,	},
 	{ID_DRAIN_MODE,		VALUE_TYPE_ENUM,	VALUE_STORE_PREF,	VALUE_STYLE_NONE,		(void *) &aircoDevice::_drain_mode,		(void *) aircoDevice::onDrainModeChanged, 	{ .enum_range = { 0, drainModes }} },
@@ -143,6 +153,8 @@ static const char *plot_legend = "cur,avg,pump";
 #if WITH_WEBASTO
 	String 		aircoDevice::_airco_state_string;
 	String 		aircoDevice::_airco_error_string;
+	String 		aircoDevice::_airco_bus_string;
+	bool 		aircoDevice::_test_no_packets;
 #endif
 
 String 		aircoDevice::_drain_state_string;

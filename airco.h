@@ -10,6 +10,14 @@
 	// set to 0 to make this "just a drain pump controller"
 	//allows for use without the RS485/Webasto monitor
 
+#if WITH_WEBASTO
+	#define WITH_DBG_RAW_PACKETS	1
+		// set to 0 to remove the DBG_RAW_PACKETS command, the one-shot
+		// raw RS485 byte capture in aircoTask(), and its printer
+#else
+	#define WITH_DBG_RAW_PACKETS	0
+#endif
+
 
 
 //=========================================================
@@ -46,6 +54,14 @@
 #if WITH_WEBASTO
 	#define ID_AIRCO_STATE			"AIRCO_STATE"		// readonly string containing airco state
 	#define ID_AIRCO_ERROR			"AIRCO_ERROR"		// readonly string containing cumulative airco errors
+	#define ID_AIRCO_BUS			"AIRCO_BUS"			// readonly "UP|DOWN since=<epoch> outages=<n> last_down=<epoch> down_secs=<n>"
+		// the RS485 bytes flowing (UP) or not (DOWN, i.e. the airco has lost power);
+		// changes ONLY on an up/down edge, so it can be polled over http
+	#define ID_TEST_NO_PACKETS		"TEST_NO_PACKETS"	// switch (not saved); fakes a DOWN in AIRCO_BUS and the log, nothing else
+#endif
+
+#if WITH_DBG_RAW_PACKETS
+	#define ID_DBG_RAW_PACKETS		"DBG_RAW_PACKETS"	// command; one-shot capture of raw RS485 bytes, printed with LOGU
 #endif
 
 // DRAIN PUMP
@@ -118,6 +134,8 @@ public:
 #if WITH_WEBASTO
 	static String 	_airco_state_string;		// built string
 	static String 	_airco_error_string;		// built string
+	static String 	_airco_bus_string;			// built string; see ID_AIRCO_BUS
+	static bool		_test_no_packets;			// see ID_TEST_NO_PACKETS
 #endif
 
 	static String 	_drain_state_string;		// built string
@@ -173,8 +191,12 @@ public:
 #if WITH_WEBASTO
 	void initAircoMonitor();
 	void handleAircoData();
+	void publishBusEvents();
 	void updateAircoUI();
 	void reportAircoError(const char *msg);
+#endif
+#if WITH_DBG_RAW_PACKETS
+	static void dbgRawPackets();
 #endif
 	static void clearAircoError();
 

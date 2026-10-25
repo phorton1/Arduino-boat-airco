@@ -22,7 +22,7 @@
 	#define PACKET_TYPE_PANEL	2
 
 	#define MAX_PACKET_SIZE   32
-	#define MAX_QUEUE_PACKETS 10
+	#define MAX_QUEUE_PACKETS 100
 
 	typedef struct
 	{
@@ -33,6 +33,44 @@
 
 	HardwareSerial AIRCO_SERIAL(2);
 	QueueHandle_t packetQueue;
+
+	// aircoTask() never blocks on the queue (that would stop it reading the UART);
+	// if the queue is full the packet is dropped and counted here.
+
+	static volatile uint32_t queue_overflows;
+
+	//-------------------------------------
+	// bus up/down events
+	//-------------------------------------
+	// "UP" means bytes are arriving from the airco RS485, "DOWN" means none
+	// have arrived for PACKET_TIMEOUT (the airco has lost power, i.e. the
+	// breaker has probably tripped), regardless of framing, crcs or content.
+	// aircoTask() is the ONLY writer; it posts events to this ring and
+	// publishBusEvents() in the loop reads and publishes them.
+
+	#define BUS_EVENT_UP		1
+	#define BUS_EVENT_DOWN		2
+	#define MAX_BUS_EVENTS		8
+
+	typedef struct
+	{
+		int			type;			// BUS_EVENT_xxx
+		uint32_t	last_heard_ms;	// millis() of the last byte before the event (0=never)
+		uint32_t	event_ms;		// millis() of the event
+	} busEvent_t;
+
+	static busEvent_t 			bus_events[MAX_BUS_EVENTS];
+	static volatile uint32_t	bus_event_head;		// number of events posted (aircoTask)
+	static uint32_t				bus_event_tail;		// number of events published (loop)
+
+	static void postBusEvent(int type, uint32_t last_heard_ms, uint32_t event_ms)
+	{
+		busEvent_t *e = &bus_events[bus_event_head % MAX_BUS_EVENTS];
+		e->type = type;
+		e->last_heard_ms = last_heard_ms;
+		e->event_ms = event_ms;
+		bus_event_head++;
+	}
 
 	//-------------------------------------
 	// packet descriptors
@@ -84,6 +122,36 @@
 	static uint8_t pan_intake_temp;
 	static uint8_t pan_fan;
 
+	#if WITH_DBG_RAW_PACKETS
+
+		// one-shot capture of the raw RS485 bytes as aircoTask() reads them,
+		// armed by the DBG_RAW_PACKETS command.  The state has exactly one
+		// owner for each transition, so no locking is needed:
+		//
+		//		IDLE -> CAPTURING	dbgRawPackets() command
+		//		CAPTURING -> DONE	aircoTask(), when the buffer is full
+		//		DONE -> IDLE		dbgPacketsPrint(), from the loop, after printing
+		//
+		// The timestamps are micros() when aircoTask() READ the byte, which
+		// can lag the actual arrival by about a millisecond (the task polls).
+
+		#define DBG_PACKET_MAX			256
+		#define DBG_PACKET_GAP_US		3000
+			// bytes further apart than this start a new line in the output
+		#define DBG_PACKET_LINE_MAX		32
+			// maximum bytes printed on one line
+
+		#define DBG_PACKET_IDLE			0
+		#define DBG_PACKET_CAPTURING	1
+		#define DBG_PACKET_DONE			2
+
+		static volatile int	dbg_packet_state = DBG_PACKET_IDLE;
+		static volatile int	dbg_packet_count = 0;
+		static uint32_t		dbg_packet_us[DBG_PACKET_MAX];
+		static uint8_t		dbg_packet_bytes[DBG_PACKET_MAX];
+
+	#endif	// WITH_DBG_RAW_PACKETS
+
 #endif
 
 
@@ -123,6 +191,68 @@ void aircoDevice::clearAircoError()
 			setString(ID_AIRCO_ERROR,err);
 		}
 	}
+
+
+	#if WITH_DBG_RAW_PACKETS
+
+		void aircoDevice::dbgRawPackets()
+			// command: arm a one-shot capture of the next DBG_PACKET_MAX raw bytes
+		{
+			if (dbg_packet_state != DBG_PACKET_IDLE)
+			{
+				LOGW("dbgRawPackets() ignored; a capture is already in progress");
+				return;
+			}
+			dbg_packet_count = 0;
+			dbg_packet_state = DBG_PACKET_CAPTURING;
+			LOGU("dbgRawPackets() capturing %d bytes ...",DBG_PACKET_MAX);
+		}
+
+
+		static void dbgPacketsPrint()
+			// called from handleAircoData() in the loop; prints a finished
+			// capture, one line per "burst" of bytes, and re-arms the command
+		{
+			if (dbg_packet_state != DBG_PACKET_DONE)
+				return;
+
+			static char line[DBG_PACKET_LINE_MAX * 3 + 1];
+
+			int count = dbg_packet_count;
+			uint32_t t0 = dbg_packet_us[0];
+			uint32_t span = dbg_packet_us[count-1] - t0;
+			LOGU("dbgRawPackets() captured %d bytes over %u.%03u ms",
+				count,
+				(unsigned) (span / 1000),
+				(unsigned) (span % 1000));
+
+			int i = 0;
+			while (i < count)
+			{
+				int start = i;
+				char *p = line;
+				while (i < count &&
+					   i - start < DBG_PACKET_LINE_MAX &&
+					   (i == start || dbg_packet_us[i] - dbg_packet_us[i-1] <= DBG_PACKET_GAP_US))
+				{
+					p += sprintf(p,"%02x ",dbg_packet_bytes[i]);
+					i++;
+				}
+
+				uint32_t at  = dbg_packet_us[start] - t0;
+				uint32_t gap = start ? dbg_packet_us[start] - dbg_packet_us[start-1] : 0;
+				LOGU("dbgRaw t(%u.%03u ms) gap(%u us) len(%d): %s",
+					(unsigned) (at / 1000),
+					(unsigned) (at % 1000),
+					(unsigned) gap,
+					i - start,
+					line);
+			}
+
+			dbg_packet_state = DBG_PACKET_IDLE;
+		}
+
+	#endif	// WITH_DBG_RAW_PACKETS
 
 
 
@@ -284,8 +414,183 @@ void aircoDevice::clearAircoError()
 	// handleData()
 	//-----------------------------------------------------------------------
 
+	static void busTimeText(time_t t, char *buf, int len)
+		// local time text, in the device's TIMEZONE, for the log lines
+	{
+		struct tm tm_local;
+		localtime_r(&t,&tm_local);
+		strftime(buf,len,"%Y-%m-%d %H:%M:%S",&tm_local);
+	}
+
+
+	void aircoDevice::publishBusEvents()
+		// called from handleAircoData() in the loop.  Publishes the up/down
+		// events posted by aircoTask() as one log line each, and as the
+		// AIRCO_BUS value, which only changes on an edge so it can be polled.
+	{
+		static int 		bus_state = -1;		// -1=unknown, 0=down, 1=up
+		static time_t	bus_since = 0;		// epoch of the start of the current state
+		static uint32_t	bus_outages = 0;	// times the bus went from up to down
+		static time_t	bus_last_down = 0;	// epoch of the last byte heard before the last outage
+		static uint32_t	bus_down_secs = 0;	// length of the last outage
+
+		// TEST_NO_PACKETS only changes what is displayed; the real state above is
+		// always tracked from the real events
+
+		static uint32_t	test_outages = 0;	// fake outages added to the outage count
+		static bool		test_on = false;	// the fake DOWN is currently being displayed
+		static time_t	test_since = 0;		// epoch the current fake outage began
+		static time_t	test_last_down = 0;	// epoch of the last completed fake outage
+		static uint32_t	test_down_secs = 0;	// and its length
+
+		bool changed = false;
+
+		static uint32_t last_overflows = 0;
+		if (queue_overflows != last_overflows)
+		{
+			LOGW("RS485 packet queue overflow; %u packets dropped",(unsigned) (queue_overflows - last_overflows));
+			last_overflows = queue_overflows;
+		}
+
+		uint32_t head = bus_event_head;
+		if (head - bus_event_tail > MAX_BUS_EVENTS)
+			bus_event_tail = head - MAX_BUS_EVENTS;
+				// the loop stalled long enough to lose the oldest events
+
+		while (bus_event_tail != head)
+		{
+			busEvent_t e = bus_events[bus_event_tail % MAX_BUS_EVENTS];
+			bus_event_tail++;
+
+			time_t time_now = time(NULL);
+			uint32_t ms_now = millis();
+			time_t at = time_now - (time_t) ((ms_now - e.event_ms) / 1000);
+			time_t heard = e.last_heard_ms ?
+				time_now - (time_t) ((ms_now - e.last_heard_ms) / 1000) : 0;
+
+			char at_text[32];
+			char heard_text[32];
+			busTimeText(at,at_text,sizeof(at_text));
+			busTimeText(heard,heard_text,sizeof(heard_text));
+
+			if (e.type == BUS_EVENT_UP)
+			{
+				if (bus_state == 0 && e.last_heard_ms)
+				{
+					bus_down_secs = (e.event_ms - e.last_heard_ms) / 1000;
+					LOGU("bus UP at %u (%s); was down %us; last heard %u (%s)",
+						(unsigned) at, at_text,
+						(unsigned) bus_down_secs,
+						(unsigned) heard, heard_text);
+				}
+				else
+				{
+					LOGU("bus UP at %u (%s); first bytes since boot",
+						(unsigned) at, at_text);
+				}
+				bus_state = 1;
+				bus_since = at;
+			}
+			else	// BUS_EVENT_DOWN
+			{
+				if (bus_state == 1)
+				{
+					bus_outages++;
+					bus_last_down = heard;
+					LOGE("bus DOWN; last heard %u (%s); was up %us",
+						(unsigned) heard, heard_text,
+						(unsigned) (heard - bus_since));
+					bus_since = heard;
+				}
+				else
+				{
+					LOGE("bus DOWN at %u (%s); no bytes since boot",
+						(unsigned) at, at_text);
+					bus_since = at;
+				}
+				bus_state = 0;
+			}
+
+			changed = true;
+		}
+
+		// the TEST_NO_PACKETS switch fakes a DOWN in the AIRCO_BUS value and
+		// the log, without touching the airco data or the real tracking
+
+		if (_test_no_packets != test_on)
+		{
+			time_t time_now = time(NULL);
+			char now_text[32];
+			busTimeText(time_now,now_text,sizeof(now_text));
+			test_on = _test_no_packets;
+			if (test_on)
+			{
+				test_outages++;
+				test_since = time_now;
+				LOGE("bus DOWN (TEST) at %u (%s)",
+					(unsigned) time_now, now_text);
+			}
+			else
+			{
+				test_last_down = test_since;
+				test_down_secs = (uint32_t) (time_now - test_since);
+				LOGU("bus UP (TEST) at %u (%s); was down %us",
+					(unsigned) time_now, now_text,
+					(unsigned) test_down_secs);
+			}
+			changed = true;
+		}
+
+		if (changed)
+		{
+			const char *state_text =
+				test_on ? "DOWN" :
+				bus_state == 1 ? "UP" :
+				bus_state == 0 ? "DOWN" : "UNKNOWN";
+			time_t since = test_on ? test_since : bus_since;
+			time_t last_down = test_on ? test_since : bus_last_down;
+			uint32_t down_secs = bus_down_secs;
+			if (!test_on && test_last_down > bus_last_down)
+			{
+				last_down = test_last_down;
+				down_secs = test_down_secs;
+			}
+
+			// line 1 is for the poller (epoch seconds); line 2 is for people
+
+			char buf[224];
+			sprintf(buf,"%s since=%u outages=%u last_down=%u down_secs=%u%s",
+				state_text,
+				(unsigned) since,
+				(unsigned) (bus_outages + test_outages),
+				(unsigned) last_down,
+				(unsigned) down_secs,
+				test_on ? " test=1" : "");
+			if (since)
+			{
+				char since_text[32];
+				busTimeText(since,since_text,sizeof(since_text));
+				sprintf(buf + strlen(buf),"<br>%s since %s",state_text,since_text);
+				if (last_down)
+				{
+					char down_text[32];
+					busTimeText(last_down,down_text,sizeof(down_text));
+					sprintf(buf + strlen(buf),"  last_down %s",down_text);
+				}
+			}
+			setString(ID_AIRCO_BUS,buf);
+		}
+	}
+
+
 	void aircoDevice::handleAircoData()
 	{
+		#if WITH_DBG_RAW_PACKETS
+			dbgPacketsPrint();
+		#endif
+
+		publishBusEvents();
+
 		packet_t packet;
 		if (!xQueueReceive(packetQueue, &packet, 0))
 			return;
@@ -420,6 +725,9 @@ void aircoDevice::clearAircoError()
 		int index = 0;
 		unsigned long last_rcv = 0;
 
+		uint32_t last_byte_ms = 0;	// for the bus edges; last_rcv is reset by the timeout handling
+		int bus_up = -1;			// -1=no bytes yet, 0=down, 1=up
+
 		enum { WAIT_SYNC, IN_PACKET } state = WAIT_SYNC;
 
 		while (1)
@@ -428,6 +736,24 @@ void aircoDevice::clearAircoError()
 			{
 				uint8_t b = (uint8_t)AIRCO_SERIAL.read();
 				last_rcv = millis();
+
+				uint32_t prev_byte_ms = last_byte_ms;
+				last_byte_ms = last_rcv;
+				if (bus_up != 1)
+				{
+					bus_up = 1;
+					postBusEvent(BUS_EVENT_UP,prev_byte_ms,last_byte_ms);
+				}
+
+				#if WITH_DBG_RAW_PACKETS
+					if (dbg_packet_state == DBG_PACKET_CAPTURING)
+					{
+						dbg_packet_us[dbg_packet_count] = micros();
+						dbg_packet_bytes[dbg_packet_count] = b;
+						if (++dbg_packet_count >= DBG_PACKET_MAX)
+							dbg_packet_state = DBG_PACKET_DONE;
+					}
+				#endif
 
 				if (state == WAIT_SYNC)
 				{
@@ -476,7 +802,8 @@ void aircoDevice::clearAircoError()
 							packet_t packet;
 							packet.len = index - 2;
 							memcpy(packet.data, buffer, packet.len);
-							xQueueSend(packetQueue, &packet, portMAX_DELAY);
+							if (xQueueSend(packetQueue, &packet, 0) != pdTRUE)
+								queue_overflows++;
 
 							// start new packet with sync
 							buffer[0] = 0x7e;
@@ -491,7 +818,8 @@ void aircoDevice::clearAircoError()
 							packet.len = index;
 							memcpy(packet.data, buffer, packet.len);
 
-							xQueueSend(packetQueue, &packet, portMAX_DELAY);
+							if (xQueueSend(packetQueue, &packet, 0) != pdTRUE)
+								queue_overflows++;
 
 							index = 0;
 							state = WAIT_SYNC;
@@ -503,6 +831,15 @@ void aircoDevice::clearAircoError()
 
 			// timeout handling
 			uint32_t now = millis();
+
+			// no bytes at all for PACKET_TIMEOUT means the bus is down
+
+			if (bus_up != 0 && now - last_byte_ms > PACKET_TIMEOUT)
+			{
+				bus_up = 0;
+				postBusEvent(BUS_EVENT_DOWN,last_byte_ms,now);
+			}
+
 			if (now - last_rcv > PACKET_TIMEOUT)
 			{
 				dropped_bytes += index;
@@ -524,6 +861,7 @@ void aircoDevice::clearAircoError()
 	void aircoDevice::initAircoMonitor()
 	{
 		LOGD("initAircoMonitor() starting aircoTask",0);
+		setString(ID_AIRCO_BUS,"UNKNOWN");
 		AIRCO_SERIAL.begin(9600, SERIAL_8N1, PIN_RX2, PIN_TX2);
 		packetQueue = xQueueCreate(MAX_QUEUE_PACKETS, sizeof(packet_t));
 		xTaskCreatePinnedToCore(
