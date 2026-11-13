@@ -59,7 +59,7 @@ logColumn_t  airco_cols[] = {
 #endif
 
 static String series_colors = "[ \"#00aaaa\",\"#ff00ff\",\"#00ff00\",\"#ff8800\",\"#888888\",\"#0000ff\",\"#ff0000\" ]";
-
+	// colors:                     cyan        magenta     green       orange      grey        blue        red
 
 
 
